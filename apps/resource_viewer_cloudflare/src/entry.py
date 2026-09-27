@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import json
-import math
 import re
 import zlib
 from datetime import datetime, timedelta, timezone
@@ -142,53 +141,53 @@ async def _search(
         "resource_id",
     ]
     if normalized_query:
-        escaped = (
-            normalized_query.replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
-        )
-        like = f"%{escaped}%"
-        conditions.append(
-            """
-            (
-                display_name LIKE ? ESCAPE '\\'
-                OR CAST(resource_id AS TEXT) = ?
-                OR search_text LIKE ? ESCAPE '\\'
+        if normalized_query.isdecimal():
+            # IDs are exact integers. Keeping this outside the text-search OR
+            # allows SQLite/D1 to use the (resource_kind, resource_id) key.
+            conditions.append("resource_id = ?")
+            parameters.append(int(normalized_query))
+        else:
+            escaped = (
+                normalized_query.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
             )
+            like = f"%{escaped}%"
+            conditions.append(
+                """
+                (
+                    display_name LIKE ? ESCAPE '\\'
+                    OR search_text LIKE ? ESCAPE '\\'
+                )
+                """
+            )
+            parameters.extend([like, like])
+            search_priority = """
+                CASE
+                    WHEN display_name = ? THEN 0
+                    WHEN display_name LIKE ? ESCAPE '\\' THEN 1
+                    ELSE 2
+                END
             """
-        )
-        parameters.extend([like, normalized_query, like])
-        search_priority = """
-            CASE
-                WHEN display_name = ? THEN 0
-                WHEN display_name LIKE ? ESCAPE '\\' THEN 1
-                ELSE 2
-            END
-        """
-        order_by.insert(0, search_priority)
-        order_parameters.extend([normalized_query, f"{escaped}%"])
+            order_by.insert(0, search_priority)
+            order_parameters.extend([normalized_query, f"{escaped}%"])
 
     where_sql = " AND ".join(conditions)
+    table_sql = "web_resource"
+    if kind == "items" and not normalized_query:
+        # The name-only index can otherwise win the planner's estimate and
+        # force a sort of every item because it omits placeholder_rank.
+        table_sql += " INDEXED BY idx_web_resource_kind_listing"
     total = _known_search_total(
         query=query,
         kind=kind,
         category=category,
     )
-    if total is None:
-        count_statement = database.prepare(
-            f"SELECT COUNT(*) AS total FROM web_resource WHERE {where_sql}"
-        )
-        if parameters:
-            count_statement = count_statement.bind(*parameters)
-        count_rows = _result_rows(await count_statement.run())
-        total = int(count_rows[0]["total"]) if count_rows else 0
-    page_count = max(1, math.ceil(total / PAGE_SIZE))
-    page = min(page, page_count)
-
+    total_column = ", COUNT(*) OVER () AS search_total" if total is None else ""
     list_statement = database.prepare(
         f"""
-        SELECT summary_json
-        FROM web_resource
+        SELECT summary_json{total_column}
+        FROM {table_sql}
         WHERE {where_sql}
         ORDER BY {", ".join(order_by)}
         LIMIT ? OFFSET ?
@@ -200,6 +199,11 @@ async def _search(
         (page - 1) * PAGE_SIZE,
     )
     rows = _result_rows(await list_statement.run())
+    if total is None:
+        total = int(rows[0]["search_total"]) if rows else 0
+    page_count = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+    if page > page_count:
+        page = page_count
     return {
         "items": [json.loads(row["summary_json"]) for row in rows],
         "total": total,

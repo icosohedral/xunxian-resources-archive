@@ -176,7 +176,11 @@ def _create_output_database(database_path: Path) -> sqlite3.Connection:
         );
 
         CREATE INDEX idx_web_resource_kind_name
-            ON web_resource(resource_kind, display_name, resource_id);
+            ON web_resource(
+                resource_kind,
+                display_name COLLATE NOCASE,
+                resource_id
+            );
         CREATE INDEX idx_web_resource_kind_listing
             ON web_resource(
                 resource_kind,
@@ -185,7 +189,11 @@ def _create_output_database(database_path: Path) -> sqlite3.Connection:
                 resource_id
             );
         CREATE INDEX idx_web_resource_companion
-            ON web_resource(companion_category, display_name, resource_id);
+            ON web_resource(
+                companion_category,
+                display_name COLLATE NOCASE,
+                resource_id
+            );
         CREATE INDEX idx_web_resource_companion_listing
             ON web_resource(
                 resource_kind,
@@ -203,7 +211,11 @@ def _create_output_database(database_path: Path) -> sqlite3.Connection:
                 resource_id
             );
         CREATE INDEX idx_web_resource_title_group
-            ON web_resource(title_group_name, display_name, resource_id);
+            ON web_resource(
+                title_group_name,
+                display_name COLLATE NOCASE,
+                resource_id
+            );
         CREATE INDEX idx_web_resource_title_group_listing
             ON web_resource(
                 title_group_name,
@@ -212,7 +224,11 @@ def _create_output_database(database_path: Path) -> sqlite3.Connection:
                 resource_id
             );
         CREATE INDEX idx_web_resource_title_family
-            ON web_resource(title_group_family_id, display_name, resource_id);
+            ON web_resource(
+                title_group_family_id,
+                display_name COLLATE NOCASE,
+                resource_id
+            );
         CREATE INDEX idx_web_resource_title_family_listing
             ON web_resource(
                 title_group_family_id,

@@ -530,7 +530,7 @@ def test_unfiltered_item_listing_does_not_force_temporary_sort(
         """
         EXPLAIN QUERY PLAN
         SELECT summary_json
-        FROM web_resource
+        FROM web_resource INDEXED BY idx_web_resource_kind_listing
         WHERE 1 = 1
           AND resource_kind IN ('item', 'quest_item')
         ORDER BY
@@ -545,4 +545,64 @@ def test_unfiltered_item_listing_does_not_force_temporary_sort(
 
     plan_text = str(plan)
     assert "idx_web_resource_kind_listing" in plan_text
+    assert "idx_web_resource_kind_name" not in plan_text
     assert "USE TEMP B-TREE FOR ORDER BY" not in plan_text
+
+
+def test_numeric_search_uses_resource_primary_key(tmp_path: Path) -> None:
+    database = tmp_path / "search.db"
+    connection = BUILD_SCRIPT._create_output_database(database)
+    plan = connection.execute(
+        """
+        EXPLAIN QUERY PLAN
+        SELECT summary_json, COUNT(*) OVER () AS search_total
+        FROM web_resource
+        WHERE resource_kind IN ('item', 'quest_item')
+          AND resource_id = 52947
+        ORDER BY
+            resource_kind,
+            placeholder_rank,
+            display_name COLLATE NOCASE,
+            resource_id
+        LIMIT 15 OFFSET 0
+        """
+    ).fetchall()
+    connection.close()
+
+    plan_text = str(plan)
+    assert "sqlite_autoindex_web_resource_1" in plan_text
+    assert "resource_kind=? AND resource_id=?" in plan_text
+
+
+def test_search_window_returns_total_without_separate_count(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "search.db"
+    connection = BUILD_SCRIPT._create_output_database(database)
+    connection.executemany(
+        """
+        INSERT INTO web_resource (
+            resource_kind, resource_id, display_name, search_text,
+            placeholder_rank, summary_json
+        ) VALUES ('title', ?, ?, '', 0, '{}')
+        """,
+        [(number, f"测试称号{number}") for number in range(20)],
+    )
+    rows = connection.execute(
+        """
+        SELECT summary_json, COUNT(*) OVER () AS search_total
+        FROM web_resource
+        WHERE resource_kind = 'title'
+          AND display_name LIKE '%测试称号%'
+        ORDER BY
+            resource_kind,
+            placeholder_rank,
+            display_name COLLATE NOCASE,
+            resource_id
+        LIMIT 15 OFFSET 0
+        """
+    ).fetchall()
+    connection.close()
+
+    assert len(rows) == 15
+    assert rows[0][1] == 20
