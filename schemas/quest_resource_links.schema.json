@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xunxian.wiki/schemas/quest_resource_links.schema.json",
+  "title": "任务站与资源站轻量关系交换文件",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "quest_site_base_url",
+    "links"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "quest_site_base_url": {
+      "type": "string",
+      "pattern": "^https?://",
+      "minLength": 10
+    },
+    "links": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/link"}
+    }
+  },
+  "$defs": {
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource_kind",
+        "resource_id",
+        "quest_id",
+        "quest_name",
+        "relation_type",
+        "source_file",
+        "source_row",
+        "quest_site_path"
+      ],
+      "properties": {
+        "resource_kind": {
+          "enum": ["item", "quest_item", "pet", "title"]
+        },
+        "resource_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "quest_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "quest_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "relation_type": {
+          "enum": [
+            "reward",
+            "required",
+            "objective",
+            "accept_endpoint",
+            "submit_endpoint",
+            "title_reward",
+            "pet_reward"
+          ]
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_file": {
+          "type": "string",
+          "minLength": 1,
+          "not": {"pattern": "^(/|[A-Za-z]:\\\\)"}
+        },
+        "source_row": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "quest_site_path": {
+          "type": "string",
+          "pattern": "^/quests/[1-9][0-9]*$"
+        }
+      }
+    }
+  }
+}
+

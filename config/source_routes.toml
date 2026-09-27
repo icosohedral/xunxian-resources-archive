@@ -1,0 +1,59 @@
+schema_version = 1
+
+# 顺序同时是同一编号空间中选择展示记录的优先级。
+[[source]]
+path = "mb/item/item_list.txt"
+resource_kind = "item"
+id_column = 0
+name_column = 1
+has_header = true
+field_status = "partially_confirmed"
+
+[[source]]
+path = "mb/item/item_list2.txt"
+resource_kind = "item"
+id_column = 0
+name_column = 1
+has_header = true
+field_status = "partially_confirmed"
+
+[[source]]
+path = "mb/item/item_list3.txt"
+resource_kind = "item"
+id_column = 0
+name_column = 1
+has_header = true
+field_status = "partially_confirmed"
+
+[[source]]
+path = "mb/quest/quest_item.txt"
+resource_kind = "quest_item"
+id_column = 1
+name_column = 0
+has_header = false
+field_status = "partially_confirmed"
+
+[[source]]
+path = "mb/pet/pet_list.txt"
+resource_kind = "pet"
+id_column = 1
+name_column = 0
+has_header = false
+field_status = "partially_confirmed"
+
+[[source]]
+path = "mb/etc/title_list.txt"
+resource_kind = "title"
+id_column = 1
+name_column = 0
+has_header = false
+field_status = "partially_confirmed"
+
+[[source]]
+path = "mb/object/ride_list.txt"
+resource_kind = "ride"
+id_column = 1
+name_column = 0
+has_header = false
+field_status = "partially_confirmed"
+

@@ -1,0 +1,10 @@
+schema_version = 1
+status = "accepted_complete_for_project"
+decided_at = "2026-07-28"
+
+# index_list 描述的安装包范围大于当前取得的资料集。缺失引用继续报告，
+# 但不再作为首期资源资料库的阻塞条件。
+index_reference_gaps_are_blocking = false
+priority_sources_required = true
+priority_sources_present = 40
+

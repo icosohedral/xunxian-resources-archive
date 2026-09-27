@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% if detail %}{{ detail.display_name }} · {% endif %}寻仙资源存档</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js?v=20260730-1" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-record">跳到资料正文</a>
+
+  <header class="masthead">
+    <a class="brand" href="/" aria-label="寻仙资源存档首页">
+      <span class="brand-seal" aria-hidden="true">寻</span>
+      <span class="brand-copy">
+        <strong>寻仙资源存档</strong>
+        <small class="brand-version">v{{ site_version }}</small>
+      </span>
+    </a>
+    <div class="masthead-status">
+      <button class="masthead-about" type="button" data-about-open>关于网站</button>
+      <span class="masthead-separator" aria-hidden="true">|</span>
+      <span class="masthead-visitors">今日来访 <strong id="today-visitors">{{ today_visitors }}</strong></span>
+    </div>
+  </header>
+
+  <dialog class="about-dialog" aria-labelledby="about-title" data-about-dialog>
+    <div class="about-panel">
+      <header class="about-heading">
+        <div>
+          <span class="eyebrow">SITE CREDITS</span>
+          <h2 id="about-title">关于网站</h2>
+        </div>
+        <button class="about-close" type="button" aria-label="关闭关于网站弹窗" data-about-close>×</button>
+      </header>
+      <div class="about-content">
+        <span class="about-seal" aria-hidden="true">寻</span>
+        <div class="about-copy">
+          <section>
+            <span class="about-label">作者与维护者</span>
+            <h3>icosohedral</h3>
+            <p>寻仙资源资料库的整理、维护与网站开发。</p>
+            <a
+              class="about-github"
+              href="https://github.com/icosohedral/xunxian-resources-archive"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span>GitHub</span>
+              <strong>icosohedral</strong>
+              <b aria-hidden="true">↗</b>
+            </a>
+          </section>
+          <section>
+            <span class="about-label">特别鸣谢</span>
+            <h3>贴吧用户「耳目清净」</h3>
+            <p>感谢其开发的寻仙游戏资源解包工具，为本资料库的资源整理提供了重要支持。</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <nav class="kind-slips" aria-label="资源类型">
+    {% for kind, label in filter_kind_labels.items() %}
+      <a class="{% if filters.kind == kind %}is-active{% endif %}" href="/?kind={{ kind }}">
+        <span>{{ {"items":"物","companions":"灵","title":"号"}[kind] }}</span>
+        <b>{{ label }}</b>
+        <small>{{ stats.filter_counts.get(kind, 0) }}</small>
+      </a>
+    {% endfor %}
+    <a href="https://quests.xunxian.wiki" target="_blank" rel="noopener noreferrer">
+      <span>任</span><b>任务</b><small>{{ external_collection_counts.quests }}</small>
+    </a>
+    <a href="https://music.xunxian.wiki" target="_blank" rel="noopener noreferrer">
+      <span>乐</span><b>音乐</b><small>{{ external_collection_counts.music }}</small>
+    </a>
+  </nav>
+
+  <main class="archive-shell {% if detail %}has-detail{% endif %} {% if is_overview %}is-overview{% endif %}">
+    {% if not is_overview %}
+    <aside class="index-rail" aria-label="{{ filter_kind_labels.get(filters.kind, '资料') }}索引">
+      <div class="rail-heading">
+        <span class="eyebrow">RESOURCE INDEX</span>
+        <h1>{{ filter_kind_labels.get(filters.kind, "资料") }}索引</h1>
+      </div>
+
+      <form class="search-form" method="get" action="/">
+        {% if filters.kind %}
+          <input type="hidden" name="kind" value="{{ filters.kind }}">
+        {% endif %}
+        <div class="search-control">
+          <input
+            name="q"
+            value="{{ filters.q }}"
+            placeholder="输入{{ filter_kind_labels.get(filters.kind, '资料') }}名称"
+            aria-label="输入{{ filter_kind_labels.get(filters.kind, '资料') }}名称"
+            autocomplete="off"
+            data-search-input
+          >
+        </div>
+        {% if filters.kind == "items" %}
+          <label>
+            <span>道具分类</span>
+            <select name="category">
+              <option value="">全部道具</option>
+              {% for category, label in item_category_labels.items() %}
+                <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% elif filters.kind == "companions" %}
+          <label>
+            <span>宠物分类</span>
+            <select name="category">
+              <option value="">全部宠物</option>
+              {% for category, label in companion_category_labels.items() %}
+                <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% elif filters.kind == "title" %}
+          <label>
+            <span>称号分组</span>
+            <select name="category">
+              <option value="">全部称号分组</option>
+              {% for family in title_group_options %}
+                {% if family.groups %}
+                  <optgroup label="{{ family.label }}">
+                    <option value="{{ family.value }}"{% if filters.category == family.value %} selected{% endif %}{% if not family.title_count %} disabled{% endif %}>全部“{{ family.label }}”分组</option>
+                    {% for group in family.groups %}
+                      <option value="{{ group.value }}"{% if filters.category == group.value %} selected{% endif %}{% if not group.title_count %} disabled{% endif %}>{{ group.label }}{% if not group.title_count %}（暂无称号）{% endif %}</option>
+                    {% endfor %}
+                  </optgroup>
+                {% else %}
+                  <option value="{{ family.value }}"{% if filters.category == family.value %} selected{% endif %}{% if not family.title_count %} disabled{% endif %}>{{ family.label }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            <small class="filter-note">上级分类名称由资料库根据现有分组归纳</small>
+          </label>
+        {% endif %}
+        <button type="submit">检索卷宗</button>
+      </form>
+
+      <div class="result-caption" aria-live="polite">
+        <strong>{{ search.total }} 条</strong>
+        <span>第 {{ search.page }} / {{ search.page_count }} 页</span>
+      </div>
+
+      <div class="resource-list">
+        {% for item in search.items %}
+          <a
+            href="/resources/{{ item.resource_kind }}/{{ item.resource_id }}?q={{ filters.q|urlencode }}&kind={{ filters.kind }}&category={{ filters.category }}&page={{ search.page }}"
+            class="{% if detail and detail.resource_kind == item.resource_kind and detail.resource_id == item.resource_id %}is-current{% endif %}"
+          >
+            <span class="kind-rune">{{ {"item":"物","quest_item":"契","pet":"灵","title":"号","ride":"骑"}[item.resource_kind] }}</span>
+            <span class="resource-list-copy">
+              <strong>{{ item.display_name }}</strong>
+              <small>{{ item.category_label or item.kind_label }} · {{ item.resource_id }}</small>
+            </span>
+          </a>
+        {% else %}
+          <div class="empty-list">
+            <span aria-hidden="true">空</span>
+            <strong>没有找到卷宗</strong>
+            <p>换一个名称、编号或资料类型试试。</p>
+          </div>
+        {% endfor %}
+      </div>
+
+      <nav class="pagination" aria-label="资料分页">
+        <a href="{{ previous_url }}" aria-disabled="{{ 'true' if search.page <= 1 else 'false' }}">上一页</a>
+        <span>{{ search.page }} / {{ search.page_count }}</span>
+        <a href="{{ next_url }}" aria-disabled="{{ 'true' if search.page >= search.page_count else 'false' }}">下一页</a>
+      </nav>
+    </aside>
+    {% endif %}
+
+    <section class="record-stage" id="main-record" tabindex="-1">
+      {% if detail %}
+        <article class="dossier">
+          <header class="dossier-heading">
+            <div>
+              <span class="eyebrow">{{ detail.category_label or detail.kind_label }} DOSSIER</span>
+              <h2>{{ detail.display_name }}</h2>
+              <p class="identity-line">{{ detail.resource_kind }}:<b>{{ detail.resource_id }}</b></p>
+            </div>
+            <button class="copy-link" type="button" data-copy-link>复制本页链接</button>
+          </header>
+
+          {% if detail.metadata or detail.use_type_descriptions %}
+            <section class="fact-section" aria-labelledby="fact-title">
+              <div class="section-title">
+                <span>壹</span>
+                <div><small>KNOWN FIELDS</small><h3 id="fact-title">概览</h3></div>
+              </div>
+              <dl class="fact-grid{% if detail.resource_kind == 'pet' %} fact-grid--pet{% endif %}">
+                {% for key, value in detail.metadata.items() %}
+                  {% if key != "item_type_id" or detail.item_type_label or detail.use_type_descriptions %}
+                    <div class="{% if key in ['description', 'acquisition_hint', 'note', 'pet_attributes'] %}is-wide{% endif %}">
+                      <dt>{{ metadata_labels.get(key, key) }}</dt>
+                      {% if key == "item_type_id" %}
+                        <dd class="item-type-cell"><span class="item-type-descriptions">{% if detail.item_type_label %}<span>{{ detail.item_type_label }}</span>{% endif %}{% for description in detail.use_type_descriptions %}<span>{{ description }}</span>{% endfor %}</span></dd>
+                      {% else %}
+                        <dd>{{ value }}</dd>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+                {% if detail.resource_kind == "item" and detail.use_type_descriptions and "item_type_id" not in detail.metadata %}
+                  <div>
+                    <dt>道具类型</dt>
+                    <dd class="item-type-cell"><span class="item-type-descriptions">{% for description in detail.use_type_descriptions %}<span>{{ description }}</span>{% endfor %}</span></dd>
+                  </div>
+                {% endif %}
+              </dl>
+            </section>
+          {% endif %}
+
+          {% if detail.resource_kind == "title" %}
+            <section class="fact-section" aria-labelledby="title-attribute-title">
+              <div class="section-title">
+                <span>贰</span>
+                <div><small>ATTRIBUTE BONUSES</small><h3 id="title-attribute-title">属性加成</h3></div>
+              </div>
+              <div class="title-attribute-groups">
+                {% for scope, heading, note in [
+                  ("active", "主动属性", "佩戴称号时生效"),
+                  ("passive", "被动属性", "获得称号后生效")
+                ] %}
+                  <article class="title-attribute-card">
+                    <header>
+                      <div>
+                        <small>{{ note }}</small>
+                        <h4>{{ heading }}</h4>
+                      </div>
+                      <span aria-hidden="true">{{ "佩" if scope == "active" else "得" }}</span>
+                    </header>
+                    {% if detail.title_attributes[scope] %}
+                      <dl>
+                        {% for attribute in detail.title_attributes[scope] %}
+                          <div>
+                            <dt>{{ attribute.attribute_name }}</dt>
+                            <dd>{{ attribute.display_value }}</dd>
+                          </div>
+                        {% endfor %}
+                      </dl>
+                    {% elif detail.title_attributes[scope ~ "_unresolved"] %}
+                      <p>原始属性配置格式异常，暂未解析。</p>
+                    {% else %}
+                      <p>无{{ heading }}</p>
+                    {% endif %}
+                  </article>
+                {% endfor %}
+              </div>
+            </section>
+          {% endif %}
+
+          {% if detail.resource_kind == "item" %}
+            <section class="fact-section" aria-labelledby="item-description-title">
+              <div class="section-title">
+                <span>贰</span>
+                <div><small>ITEM DESCRIPTION</small><h3 id="item-description-title">道具说明</h3></div>
+              </div>
+              {% if detail.item_description %}
+                <div class="item-description">
+                  <p>{{ detail.item_description.description }}</p>
+                </div>
+              {% else %}
+                <div class="section-empty">当前道具没有配置玩家可读的完整说明。</div>
+              {% endif %}
+            </section>
+          {% endif %}
+
+          {% if detail.resource_kind == "item" %}
+            <section class="fact-section" aria-labelledby="effect-title">
+              <div class="section-title">
+                <span>叁</span>
+                <div><small>USE EFFECTS</small><h3 id="effect-title">使用效果</h3></div>
+              </div>
+              {% if detail.display_use_effects %}
+                <div class="effect-list">
+                  {% for effect in detail.display_use_effects %}
+                    <div class="effect-entry">
+                      {% if effect.display_description and effect.display_description != detail.display_name %}
+                        <p>效果备注：{{ effect.display_description }}</p>
+                      {% elif not effect.description %}
+                        <p>原始资料未写效果备注。</p>
+                      {% endif %}
+                      {% if effect.resolved_description %}
+                        <div class="effect-detail">
+                          {% if effect.resolved_name %}
+                            <b>{{ effect.resolved_name }}</b>
+                          {% endif %}
+                          <p>{{ effect.resolved_description }}</p>
+                        </div>
+                      {% endif %}
+                      {% if effect.resolved_targets %}
+                        <div class="effect-targets">
+                          {% for target in effect.resolved_targets %}
+                            <a href="/resources/{{ target.target_kind }}/{{ target.target_id }}">
+                              <span>{{ target.relation_label }}</span>
+                              <b>{{ target.target_name }}</b>
+                              <small>{{ target.target_kind_label }} · {{ target.target_id }}</small>
+                            </a>
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+                      {% if effect.amount %}
+                        <small>数量 {{ effect.amount }}</small>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="section-empty">无使用效果</div>
+              {% endif %}
+            </section>
+          {% endif %}
+
+          {% if detail.resource_kind in ["ride", "pet", "title"] %}
+            <section class="fact-section" aria-labelledby="acquisition-title">
+              <div class="section-title">
+                <span>{{ "叁" if detail.resource_kind == "title" else "贰" }}</span>
+                <div><small>ACQUISITION ITEMS</small><h3 id="acquisition-title">获得道具</h3></div>
+              </div>
+              {% if detail.acquisition_items %}
+                <p class="acquisition-context">
+                  {% if detail.resource_kind == "ride" %}
+                    包括直接获得此坐骑的道具，以及获得对应骑宠后使用此骑乘配置的道具。
+                  {% elif detail.resource_kind == "pet" %}
+                    以下道具的使用效果明确指向此宠物；通用蛋未确认具体产物时不会列入。
+                  {% else %}
+                    以下道具的使用效果明确指向此称号。
+                  {% endif %}
+                </p>
+                <div class="acquisition-grid">
+                  {% for item in detail.acquisition_items %}
+                    <article class="acquisition-card">
+                      <a href="/resources/item/{{ item.item_id }}">
+                        <span>{{ item.type_label }}</span>
+                        <strong>{{ item.item_name }}</strong>
+                        <small>
+                          普通道具 · {{ item.item_id }}
+                          {% if item.item_type_id is not none %} · 类型 {{ item.item_type_id }}{% endif %}
+                        </small>
+                      </a>
+                      <div class="acquisition-routes">
+                        {% for description in item.effect_descriptions %}
+                          {% if description != item.item_name %}
+                            <p class="acquisition-evidence">资料说明：{{ description }}</p>
+                          {% endif %}
+                        {% endfor %}
+                        {% for route in item.routes %}
+                          {% if route.route == "direct_ride" %}
+                            <p>直接获得此坐骑</p>
+                          {% elif route.route == "direct_pet" %}
+                            <p>使用后获得此宠物</p>
+                          {% elif route.route == "direct_title" %}
+                            <p>使用后获得此称号</p>
+                          {% else %}
+                            <p>
+                              通过骑宠
+                              <a href="/resources/pet/{{ route.via_pet_id }}">{{ route.via_pet_name }}</a>
+                            </p>
+                          {% endif %}
+                        {% endfor %}
+                      </div>
+                    </article>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="section-empty">当前资料尚未找到能够明确对应到此{{ "坐骑" if detail.resource_kind == "ride" else ("宠物" if detail.resource_kind == "pet" else "称号") }}的获得道具。</div>
+              {% endif %}
+            </section>
+          {% endif %}
+
+          {% if detail.resource_kind == "ride" or detail.ride_skill_context %}
+            <section class="fact-section" aria-labelledby="ride-skill-title">
+              <div class="section-title">
+                <span>叁</span>
+                <div><small>RIDING ARTS</small><h3 id="ride-skill-title">坐骑技能</h3></div>
+              </div>
+              {% if detail.ride_skill_context %}
+                {% if detail.ride_skill_context.inherited_from_ride %}
+                  <p class="skill-context">
+                    技能取自关联骑乘配置
+                    <a href="/resources/ride/{{ detail.ride_skill_context.ride_id }}">
+                      {{ detail.ride_skill_context.ride_name }} · {{ detail.ride_skill_context.ride_id }}
+                    </a>
+                  </p>
+                {% endif %}
+                {% if detail.ride_skills %}
+                  <div class="skill-ledger">
+                    {% for skill in detail.ride_skills %}
+                      <article class="skill-slip {% if not skill.is_resolved %}is-unresolved{% endif %}">
+                        <span class="skill-slot">{{ {1:"一", 2:"二", 3:"三", 4:"四", 5:"五", 6:"六"}.get(skill.slot_no, skill.slot_no) }}</span>
+                        <div>
+                          <strong>{{ skill.display_name or "未解析技能" }}</strong>
+                          {% if skill.description %}
+                            <p>{{ skill.description }}</p>
+                          {% elif not skill.is_resolved %}
+                            <p>原始坐骑表保留了这个技能编号，但当前技能资料中没有对应定义。</p>
+                          {% else %}
+                            <p>当前资料中没有玩家可读的完整效果说明。</p>
+                          {% endif %}
+                        </div>
+                        {% if skill.internal_note %}
+                          <details class="skill-note">
+                            <summary>内部备注</summary>
+                            <p>{{ skill.internal_note }}</p>
+                          </details>
+                        {% endif %}
+                      </article>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="section-empty">坐骑技能为空</div>
+                {% endif %}
+              {% else %}
+                <div class="section-empty">坐骑技能为空</div>
+              {% endif %}
+            </section>
+          {% endif %}
+
+          <section class="fact-section" aria-labelledby="quest-title">
+            <div class="section-title">
+              <span>{% if detail.resource_kind in ["item", "ride", "title"] or (detail.resource_kind == "pet" and detail.ride_skill_context) %}肆{% elif detail.resource_kind == "pet" %}叁{% else %}贰{% endif %}</span>
+              <div><small>QUEST LINKS</small><h3 id="quest-title">关联任务</h3></div>
+            </div>
+            {% if detail.quest_links %}
+              <div class="quest-links">
+                {% for quest in detail.quest_links %}
+                  <a href="{{ quest.url }}" target="_blank" rel="noopener noreferrer">
+                    <span>{{ quest.relation_label }}</span>
+                    <strong>{{ quest.quest_name }}</strong>
+                    {% if quest.amount %}<small>数量 {{ quest.amount }}</small>{% endif %}
+                    <b aria-hidden="true">↗</b>
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="section-empty">任务资料库暂未记录这个资源。</div>
+            {% endif %}
+          </section>
+
+        </article>
+      {% elif is_overview %}
+        <article class="archive-intro">
+          <span class="intro-mark" aria-hidden="true">录</span>
+          <p class="eyebrow">A TRACEABLE RESOURCE ARCHIVE</p>
+          <h2>一个称号因何而来，一段乐曲通向何处？你的仙路从几时启程，又将在哪里落幕？</h2>
+          <p class="intro-thesis">
+            循着道具、宠物、称号、任务与乐曲留下的线索，重新串起寻仙世界里每一段有迹可循的仙途。
+          </p>
+        </article>
+      {% else %}
+        <article class="search-empty-stage" aria-live="polite">
+          <span class="empty-seal" aria-hidden="true">空</span>
+          <p class="eyebrow">SEARCH RESULT</p>
+          <h2>未找到{{ empty_resource_label }}</h2>
+          {% if filters.q %}
+            <p>没有与“{{ filters.q }}”相符的{{ empty_resource_label }}卷宗。</p>
+          {% else %}
+            <p>当前分类下尚未收录{{ empty_resource_label }}卷宗。</p>
+          {% endif %}
+          <small>请尝试其他名称、编号或分类。</small>
+        </article>
+      {% endif %}
+    </section>
+  </main>
+
+</body>
+</html>

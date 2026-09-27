@@ -1,0 +1,14 @@
+[project]
+name = "xunxian-resource-archive-worker"
+version = "1.0.4"
+description = "Cloudflare Worker deployment for the Xunxian resource archive"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.116,<1",
+  "jinja2>=3.1,<4",
+]
+
+[dependency-groups]
+dev = [
+  "workers-py",
+]

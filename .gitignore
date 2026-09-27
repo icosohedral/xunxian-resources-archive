@@ -1,0 +1,125 @@
+# =============================================================================
+# 寻仙资源资料库
+# =============================================================================
+
+# 权威原始资料只保存在本机。禁止修改，也禁止提交或上传。
+/original_data/
+/original_data.*
+/*original_data*.zip
+/*original_data*.7z
+/*original_data*.rar
+/*original_data*.tar
+/*original_data*.tar.*
+
+# -----------------------------------------------------------------------------
+# 可重建的数据、数据库与网站构建产物
+# -----------------------------------------------------------------------------
+
+/outputs/
+/working_assets/
+/public/generated/
+/dist/
+/build/
+
+# Cloudflare Worker 由构建脚本生成的数据库、模板和静态资源副本。
+/apps/resource_viewer_cloudflare/data/
+/apps/resource_viewer_cloudflare/src/generated_*.py
+/apps/resource_viewer_cloudflare/public/static/
+/apps/resource_viewer_cloudflare/python_modules/
+/apps/resource_viewer_cloudflare/.venv-workers/
+
+# 意外产生的锁文件副本；正式 pylock.toml 和 uv.lock 必须提交。
+/apps/resource_viewer_cloudflare/pylock 2.toml
+
+# 本地数据库及其事务附属文件。
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+*.index
+
+# Python 打包产物。
+*.egg
+*.egg-info/
+*.whl
+pip-wheel-metadata/
+
+# -----------------------------------------------------------------------------
+# 密钥、部署状态与本机配置
+# -----------------------------------------------------------------------------
+
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Cloudflare 的本地状态和账号缓存；wrangler.jsonc 应提交。
+.wrangler/
+.cloudflare/
+
+# 私钥、证书与常见凭据文件。
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+
+# -----------------------------------------------------------------------------
+# Python、测试与分析工具缓存
+# -----------------------------------------------------------------------------
+
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+.tox/
+.nox/
+
+# -----------------------------------------------------------------------------
+# Node.js 与前端工具缓存
+# -----------------------------------------------------------------------------
+
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -----------------------------------------------------------------------------
+# 编辑器、系统、日志与临时文件
+# -----------------------------------------------------------------------------
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.code-workspace
+
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~

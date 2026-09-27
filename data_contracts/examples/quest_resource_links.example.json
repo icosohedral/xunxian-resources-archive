@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-28T00:00:00Z",
+  "quest_site_base_url": "https://quests.xunxian.wiki",
+  "links": [
+    {
+      "resource_kind": "item",
+      "resource_id": 900001,
+      "quest_id": 800001,
+      "quest_name": "合成测试任务",
+      "relation_type": "reward",
+      "amount": 1,
+      "source_file": "fixtures/quest.tsv",
+      "source_row": 2,
+      "quest_site_path": "/quests/800001"
+    }
+  ]
+}
+

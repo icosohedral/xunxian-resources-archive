@@ -1,0 +1,27 @@
+schema_version = 1
+
+[spaces.item]
+label = "普通道具"
+identity = ["resource_kind", "resource_id"]
+sources = ["mb/item/item_list.txt", "mb/item/item_list2.txt", "mb/item/item_list3.txt"]
+
+[spaces.quest_item]
+label = "任务逻辑道具"
+identity = ["resource_kind", "resource_id"]
+sources = ["mb/quest/quest_item.txt", "mb/quest/quest_item_ex.txt"]
+
+[spaces.pet]
+label = "宠物"
+identity = ["resource_kind", "resource_id"]
+sources = ["mb/pet/pet_list.txt"]
+
+[spaces.title]
+label = "称号"
+identity = ["resource_kind", "resource_id"]
+sources = ["mb/etc/title_list.txt"]
+
+[spaces.ride]
+label = "骑乘配置"
+identity = ["resource_kind", "resource_id"]
+sources = ["mb/object/ride_list.txt"]
+
