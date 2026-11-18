@@ -336,6 +336,7 @@ def test_home_search_and_detail_render(tmp_path: Path) -> None:
     assert "<b>任务</b>" in home.text
     assert 'src="/static/icons/companions.png?v=' in home.text
     assert 'class="brand-logo" src="/static/icons/logo.png?v=' in home.text
+    assert '<link rel="icon" href="/static/icons/logo.png?v=' in home.text
     assert 'href="https://music.xunxian.wiki"' in home.text
     assert "<b>音乐</b>" in home.text
     assert "<small>8828</small>" not in home.text
