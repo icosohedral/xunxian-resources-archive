@@ -96,7 +96,10 @@ def create_app(
                     status_code=404,
                     detail="未知资源类型",
                 ) from exc
+        # 自动选中的详情在手机端先隐藏，只显示列表
+        auto_selected = False
         if detail is None and select_first_result and result.items:
+            auto_selected = True
             first_result = result.items[0]
             detail = repository.detail(
                 first_result["resource_kind"],
@@ -110,6 +113,7 @@ def create_app(
         next_query = urlencode(
             {**filters, "page": min(result.page_count, result.page + 1)}
         )
+        list_query = urlencode({**filters, "page": result.page})
         return templates.TemplateResponse(
             request=request,
             name="index.html",
@@ -131,6 +135,8 @@ def create_app(
                 "empty_resource_label": FILTER_KIND_LABELS.get(kind, "资源"),
                 "previous_url": f"/?{previous_query}",
                 "next_url": f"/?{next_query}",
+                "list_url": f"/?{list_query}",
+                "auto_selected": auto_selected,
             },
         )
 

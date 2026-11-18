@@ -230,6 +230,22 @@ window.addEventListener("popstate", () => {
 });
 
 // 配色切换：与 GM 工作台一致的三套主题，选择保存在本机浏览器
+// 手机端详情页的返回按钮：从本站列表进来时直接后退，保留原来的滚动位置。
+document.addEventListener("click", (event) => {
+  const backLink =
+    event.target instanceof Element
+      ? event.target.closest("[data-mobile-back]")
+      : null;
+  if (!backLink || window.history.length < 2 || !document.referrer) {
+    return;
+  }
+  const referrer = new URL(document.referrer);
+  if (referrer.origin === window.location.origin && referrer.pathname === "/") {
+    event.preventDefault();
+    window.history.back();
+  }
+});
+
 // 手机端导航：任务、音乐默认折叠，点“更多”展开或收起。
 const railMoreButton = document.querySelector("[data-rail-more]");
 if (railMoreButton) {

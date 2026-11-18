@@ -14,8 +14,8 @@
       if (savedTheme === "dark") document.documentElement.dataset.mode = "dark";
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20261118-14">
-  <script src="/static/app.js?v=20261118-14" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261118-15">
+  <script src="/static/app.js?v=20261118-15" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-record">跳到资料正文</a>
@@ -82,7 +82,7 @@
     </div>
   </nav>
 
-  <main class="archive-shell {% if detail %}has-detail{% endif %} {% if is_overview %}is-overview{% endif %}">
+  <main class="archive-shell {% if detail %}has-detail{% endif %} {% if auto_selected %}is-auto-selected{% endif %} {% if is_overview %}is-overview{% endif %}">
     {% if not is_overview %}
     <aside class="index-rail" aria-label="{{ filter_kind_labels.get(filters.kind, '资料') }}索引" data-page-size="{{ page_size }}" data-page="{{ search.page }}">
       <div class="rail-heading">
@@ -180,6 +180,13 @@
     {% endif %}
 
     <section class="record-stage" id="main-record" tabindex="-1">
+      {% if detail and (filters.kind or filters.q or filters.category) %}
+        {#- 手机端详情页顶部的返回按钮；桌面端隐藏 #}
+        <a class="mobile-back" href="{{ list_url }}" data-mobile-back>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>
+          {%- if filters.q %}返回搜索结果{% else %}返回{{ filter_kind_labels.get(filters.kind, "资料") }}列表{% endif -%}
+        </a>
+      {% endif %}
       {% if detail %}
         <article class="dossier">
           <header class="dossier-heading">

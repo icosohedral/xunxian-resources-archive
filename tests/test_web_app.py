@@ -418,6 +418,18 @@ def test_resource_landing_pages_select_first_result(
         assert first_link is not None, kind
         resource_kind, resource_id = first_link.groups()
         assert f"{resource_kind}:<b>{resource_id}</b>" in page.text
+        # 自动选中的详情带标记，手机端据此只显示列表
+        assert "has-detail is-auto-selected" in page.text, kind
+        assert f'href="/?q=&amp;kind={kind}&amp;category=&amp;page=1" data-mobile-back' in page.text
+
+        # 直接打开的详情页不带标记，手机端只显示详情和返回按钮
+        detail_page = client.get(f"/resources/{resource_kind}/{resource_id}")
+        assert detail_page.status_code == 200
+        assert "is-auto-selected" not in detail_page.text
+        assert "data-mobile-back" in detail_page.text
+
+    # 首页概况没有返回按钮
+    assert "data-mobile-back" not in client.get("/").text
 
 
 def test_filtered_landing_page_selects_first_matching_result(

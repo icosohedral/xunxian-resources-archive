@@ -863,6 +863,11 @@ a {
   min-width: 0;
 }
 
+/* 手机端详情页的返回按钮，桌面端不显示 */
+.mobile-back {
+  display: none;
+}
+
 .record-stage:focus {
   outline: none;
 }
@@ -1814,6 +1819,46 @@ a {
 
   .archive-shell.has-detail .index-rail {
     order: 2;
+  }
+
+  /* 手机端分两层：列表页只显示索引，详情页只显示详情 */
+  .archive-shell.is-auto-selected .record-stage {
+    display: none;
+  }
+
+  .archive-shell.has-detail:not(.is-auto-selected) .index-rail {
+    display: none;
+  }
+
+  .mobile-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 40px;
+    margin: 0 0 6px;
+    padding: 0 14px 0 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    box-shadow: var(--card-shadow);
+    color: var(--pine);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .mobile-back:active {
+    background: var(--hover);
+  }
+
+  .mobile-back svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .dossier-heading {

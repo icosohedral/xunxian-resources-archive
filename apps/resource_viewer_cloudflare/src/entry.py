@@ -324,7 +324,10 @@ async def _render(
             )
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # 自动选中的详情在手机端先隐藏，只显示列表
+    auto_selected = False
     if detail is None and select_first_result and search["items"]:
+        auto_selected = True
         first_result = search["items"][0]
         detail = await _get_detail(
             env.RESOURCE_DB,
@@ -342,6 +345,7 @@ async def _render(
             "page": min(search["page_count"], search["page"] + 1),
         }
     )
+    list_query = urlencode({**filters, "page": search["page"]})
     html = index_template.render(
         request=request,
         detail=detail,
@@ -363,6 +367,8 @@ async def _render(
         ),
         previous_url=f"/?{previous_query}",
         next_url=f"/?{next_query}",
+        list_url=f"/?{list_query}",
+        auto_selected=auto_selected,
     )
     return HTMLResponse(html)
 
