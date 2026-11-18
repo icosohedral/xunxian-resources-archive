@@ -17,6 +17,8 @@
 
 /outputs/
 /working_assets/
+# 本机原图素材；需要发布的图标复制到 public/icons/。
+/assets/
 /public/generated/
 /dist/
 /build/
