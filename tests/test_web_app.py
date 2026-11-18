@@ -337,6 +337,9 @@ def test_home_search_and_detail_render(tmp_path: Path) -> None:
     assert 'src="/static/icons/companions.png?v=' in home.text
     assert 'class="brand-logo" src="/static/icons/logo.png?v=' in home.text
     assert '<link rel="icon" href="/static/icons/logo.png?v=' in home.text
+    # 手机端任务、音乐折叠在“更多”按钮之后
+    assert 'data-rail-more aria-expanded="false" aria-controls="rail-external"' in home.text
+    assert '<div class="rail-external" id="rail-external">' in home.text
     assert 'href="https://music.xunxian.wiki"' in home.text
     assert "<b>音乐</b>" in home.text
     assert "<small>8828</small>" not in home.text

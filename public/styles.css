@@ -412,6 +412,17 @@ a {
 
 
 
+/* “更多”按钮只在手机端出现；桌面端任务、音乐常驻显示 */
+.rail-more {
+  display: none;
+}
+
+.rail-external {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .rail-sep {
   flex: none;
   height: 1px;
@@ -1647,27 +1658,25 @@ a {
     grid-template-rows: auto auto 1fr;
   }
 
-  /* 侧栏变成可横向滚动的标签条 */
+  /* 参照音乐站：导航为等宽一行，版本号与配色另起一行；任务、音乐收进“更多” */
   .kind-slips {
     position: static;
-    flex-direction: row;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3px;
     height: auto;
     padding: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    overflow: visible;
   }
 
-  .kind-slips::-webkit-scrollbar {
-    display: none;
-  }
-
-  .kind-slips a {
-    flex: 0 0 auto;
+  .kind-slips a,
+  .rail-more {
     grid-template-columns: 24px auto;
+    justify-content: center;
     gap: 7px;
+    min-width: 0;
     min-height: 40px;
-    padding: 0 10px;
+    padding: 0 6px;
     font-size: 13px;
   }
 
@@ -1678,16 +1687,77 @@ a {
     font-size: 12px;
   }
 
+  .rail-more {
+    display: grid;
+    align-items: center;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--ink-soft);
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.13s ease;
+  }
+
+  .rail-more:hover,
+  .rail-more[aria-expanded="true"] {
+    background: var(--hover);
+    color: var(--ink);
+  }
+
+  .rail-more b {
+    font-weight: inherit;
+    white-space: nowrap;
+  }
+
+  .rail-more-icon {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--field);
+  }
+
+  .rail-more-icon svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.18s ease;
+  }
+
+  .rail-more[aria-expanded="true"] .rail-more-icon svg {
+    transform: rotate(180deg);
+  }
+
   .rail-sep {
-    width: 1px;
-    height: 22px;
-    margin: 0 4px;
+    display: none;
+  }
+
+  .rail-external {
+    display: none;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+    padding-top: 3px;
+    border-top: 1px solid var(--line-soft, var(--line));
+  }
+
+  .kind-slips.is-expanded .rail-external {
+    display: grid;
   }
 
   .rail-footer {
-    flex: none;
-    margin: 0 0 0 auto;
-    padding: 0 8px;
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 6px 8px 2px;
+    border-top: 1px solid var(--line-soft, var(--line));
   }
 
   .archive-shell {
@@ -1735,6 +1805,7 @@ a {
   .archive-shell.has-detail {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .archive-shell.has-detail .record-stage {

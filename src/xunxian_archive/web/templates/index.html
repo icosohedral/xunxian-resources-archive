@@ -14,8 +14,8 @@
       if (savedTheme === "dark") document.documentElement.dataset.mode = "dark";
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20261118-13">
-  <script src="/static/app.js?v=20261118-12" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261118-14">
+  <script src="/static/app.js?v=20261118-14" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-record">跳到资料正文</a>
@@ -59,13 +59,19 @@
         <b>{{ label }}</b>
       </a>
     {% endfor %}
+    {#- 手机端：任务、音乐默认折叠，点“更多”展开 #}
+    <button type="button" class="rail-more" data-rail-more aria-expanded="false" aria-controls="rail-external">
+      <span class="rail-more-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg></span><b>更多</b>
+    </button>
     <div class="rail-sep" aria-hidden="true"></div>
-    <a href="https://quests.xunxian.wiki" target="_blank" rel="noopener noreferrer">
-      <span class="slip-icon"><img src="/static/icons/{{ nav_icons.quests }}.png?v=20261118-12" alt="" width="28" height="28"></span><b>任务</b>
-    </a>
-    <a href="https://music.xunxian.wiki" target="_blank" rel="noopener noreferrer">
-      <span class="slip-icon"><img src="/static/icons/{{ nav_icons.music }}.png?v=20261118-12" alt="" width="28" height="28"></span><b>音乐</b>
-    </a>
+    <div class="rail-external" id="rail-external">
+      <a href="https://quests.xunxian.wiki" target="_blank" rel="noopener noreferrer">
+        <span class="slip-icon"><img src="/static/icons/{{ nav_icons.quests }}.png?v=20261118-12" alt="" width="28" height="28"></span><b>任务</b>
+      </a>
+      <a href="https://music.xunxian.wiki" target="_blank" rel="noopener noreferrer">
+        <span class="slip-icon"><img src="/static/icons/{{ nav_icons.music }}.png?v=20261118-12" alt="" width="28" height="28"></span><b>音乐</b>
+      </a>
+    </div>
     <div class="rail-footer">
       <button type="button" class="rail-version" data-about-open aria-haspopup="dialog" aria-label="关于寻仙资源存档，版本 {{ site_version }}">v{{ site_version }}</button>
       <div class="theme-picker" role="group" aria-label="颜色主题">
