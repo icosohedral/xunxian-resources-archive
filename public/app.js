@@ -1,11 +1,11 @@
 const searchInput = document.querySelector("[data-search-input]");
-const copyButton = document.querySelector("[data-copy-link]");
 const directoryPanel = document.querySelector(".index-rail");
 const todayVisitors = document.getElementById("today-visitors");
-const aboutOpenButton = document.querySelector("[data-about-open]");
+const aboutOpenButtons = document.querySelectorAll("[data-about-open]");
 const aboutDialog = document.querySelector("[data-about-dialog]");
 const aboutCloseButton = document.querySelector("[data-about-close]");
 let directoryRequestId = 0;
+let aboutReturnFocus = null;
 
 const recordAnonymousVisit = async () => {
   if (!todayVisitors) {
@@ -43,19 +43,29 @@ const recordAnonymousVisit = async () => {
 
 recordAnonymousVisit();
 
-aboutOpenButton?.addEventListener("click", () => {
-  if (aboutDialog instanceof HTMLDialogElement && !aboutDialog.open) {
-    aboutDialog.showModal();
-    aboutCloseButton?.focus();
+const closeAboutDialog = () => {
+  if (aboutDialog instanceof HTMLDialogElement && aboutDialog.open) {
+    aboutDialog.close();
   }
+};
+
+aboutOpenButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (aboutDialog instanceof HTMLDialogElement && !aboutDialog.open) {
+      aboutReturnFocus = button;
+      aboutDialog.showModal();
+      aboutCloseButton?.focus({ preventScroll: true });
+    }
+  });
 });
 
-aboutCloseButton?.addEventListener("click", () => {
-  if (aboutDialog instanceof HTMLDialogElement) {
-    aboutDialog.close();
-    aboutOpenButton?.focus();
-  }
+// Esc 关闭、点“知道了”或点遮罩关闭后，焦点都回到打开弹窗的按钮
+aboutDialog?.addEventListener("close", () => {
+  aboutReturnFocus?.focus({ preventScroll: true });
+  aboutReturnFocus = null;
 });
+
+aboutCloseButton?.addEventListener("click", closeAboutDialog);
 
 aboutDialog?.addEventListener("click", (event) => {
   if (!(aboutDialog instanceof HTMLDialogElement) || event.target !== aboutDialog) {
@@ -72,8 +82,7 @@ aboutDialog?.addEventListener("click", (event) => {
     event.clientY < bounds.top ||
     event.clientY > bounds.bottom;
   if (outsidePanel) {
-    aboutDialog.close();
-    aboutOpenButton?.focus();
+    closeAboutDialog();
   }
 });
 
@@ -88,17 +97,6 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-copyButton?.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(window.location.href);
-    copyButton.textContent = "链接已复制";
-    window.setTimeout(() => {
-      copyButton.textContent = "复制本页链接";
-    }, 1800);
-  } catch {
-    copyButton.textContent = "请复制地址栏链接";
-  }
-});
 
 const markCurrentResource = () => {
   if (!directoryPanel || !window.location.pathname.startsWith("/resources/")) {
@@ -116,8 +114,6 @@ const markCurrentResource = () => {
 const currentDirectoryPosition = () => ({
   viewportScrollX: window.scrollX,
   viewportScrollY: window.scrollY,
-  directoryScrollTop:
-    directoryPanel?.querySelector(".resource-list")?.scrollTop ?? 0,
 });
 
 const refreshDirectory = async (
@@ -145,7 +141,8 @@ const refreshDirectory = async (
 
     const documentText = await response.text();
     const nextDocument = new DOMParser().parseFromString(documentText, "text/html");
-    const selectors = [".result-caption", ".resource-list", ".pagination"];
+    // 翻页按钮位于结果栏内，替换结果栏即可同时更新页码
+    const selectors = [".result-caption", ".resource-list"];
     const replacements = selectors.map((selector) => [
       directoryPanel.querySelector(selector),
       nextDocument.querySelector(`.index-rail ${selector}`),
@@ -160,20 +157,28 @@ const refreshDirectory = async (
     replacements.forEach(([currentNode, nextNode]) => {
       currentNode.replaceChildren(...nextNode.childNodes);
     });
+    const nextPanel = nextDocument.querySelector(".index-rail");
+    if (nextPanel instanceof HTMLElement) {
+      directoryPanel.dataset.pageSize = nextPanel.dataset.pageSize || "";
+      directoryPanel.dataset.page = nextPanel.dataset.page || "";
+    }
+    // 目录在卡片内部滚动：换页后从新一页的第一条开始显示
     const nextResourceList = directoryPanel.querySelector(".resource-list");
     if (nextResourceList) {
-      nextResourceList.scrollTop = preservedPosition.directoryScrollTop;
+      nextResourceList.scrollTop = 0;
     }
     markCurrentResource();
 
     if (updateHistory) {
       const visibleUrl = new URL(window.location.href);
       visibleUrl.search = targetUrl.search;
-      window.history.pushState(
-        { directoryPagination: true },
-        "",
-        `${visibleUrl.pathname}${visibleUrl.search}${visibleUrl.hash}`,
-      );
+      const visiblePath = `${visibleUrl.pathname}${visibleUrl.search}${visibleUrl.hash}`;
+      if (updateHistory === "replace") {
+        // 按窗口高度调整条数时不新增历史记录
+        window.history.replaceState({ directoryPagination: true }, "", visiblePath);
+      } else {
+        window.history.pushState({ directoryPagination: true }, "", visiblePath);
+      }
     }
     const restoreViewportPosition = () => {
       if (requestId !== directoryRequestId) {
@@ -222,4 +227,132 @@ document.addEventListener("click", (event) => {
 
 window.addEventListener("popstate", () => {
   refreshDirectory(`/${window.location.search}`, { updateHistory: false });
+});
+
+// 配色切换：与 GM 工作台一致的三套主题，选择保存在本机浏览器
+const themeStorageKey = "xunxian-archive-color-theme";
+const themeSwatches = document.querySelectorAll(".theme-swatch");
+
+const currentTheme = () => {
+  const root = document.documentElement;
+  if (root.dataset.mode === "dark") {
+    return "dark";
+  }
+  return root.dataset.theme === "orange" ? "orange" : "green";
+};
+
+const applyTheme = (theme) => {
+  const root = document.documentElement;
+  if (theme === "orange" || theme === "dark") {
+    root.dataset.theme = "orange";
+  } else {
+    delete root.dataset.theme;
+  }
+  if (theme === "dark") {
+    root.dataset.mode = "dark";
+  } else {
+    delete root.dataset.mode;
+  }
+  themeSwatches.forEach((swatch) => {
+    swatch.setAttribute(
+      "aria-pressed",
+      String(swatch.dataset.themeValue === theme),
+    );
+  });
+};
+
+applyTheme(currentTheme());
+
+themeSwatches.forEach((swatch) => {
+  swatch.addEventListener("click", () => {
+    const theme = swatch.dataset.themeValue || "green";
+    applyTheme(theme);
+    try {
+      localStorage.setItem(themeStorageKey, theme);
+    } catch {
+      // 无痕模式等环境不能保存时，仅对当前页面生效
+    }
+  });
+});
+
+// 每页条数随窗口高度变化：索引卡片放得下几条，一页就显示几条，目录不滚动。
+// 结果写入 Cookie，之后的页面由服务器直接按这个条数输出。
+const pageSizeCookie = "xunxian-archive-page-size";
+const minPageSize = 4;
+const maxPageSize = 40;
+
+// 让目录正好填满卡片：
+// - 剩余空间够放大半行，且多放一行时每行压缩不超过 10%，就多放一行并略压低行高；
+// - 否则把剩余空白平均分给每一行，让每行略高一点。
+const maxRowCompression = 0.1;
+
+const fittingLayout = () => {
+  if (
+    !directoryPanel ||
+    getComputedStyle(directoryPanel).position !== "sticky"
+  ) {
+    return null; // 窄屏下目录随页面滚动，沿用默认条数与行高
+  }
+  const list = directoryPanel.querySelector(".resource-list");
+  if (!(list instanceof HTMLElement)) {
+    return null;
+  }
+  const style = getComputedStyle(list);
+  const baseRowHeight = parseFloat(style.getPropertyValue("--row-base")) || 52;
+  const gap = parseFloat(style.rowGap) || 0;
+  const available =
+    list.clientHeight -
+    parseFloat(style.paddingTop) -
+    parseFloat(style.paddingBottom);
+
+  let rows = Math.max(1, Math.floor((available + gap) / (baseRowHeight + gap)));
+  const leftover = available - (rows * baseRowHeight + (rows - 1) * gap);
+  const compressedHeight = (available - rows * gap) / (rows + 1);
+  if (
+    leftover >= baseRowHeight / 2 &&
+    compressedHeight >= baseRowHeight * (1 - maxRowCompression)
+  ) {
+    rows += 1;
+  }
+  rows = Math.min(maxPageSize, Math.max(minPageSize, rows));
+  const rowHeight = (available - (rows - 1) * gap) / rows;
+  return { size: rows, rowHeight };
+};
+
+const syncPageSize = () => {
+  const list = directoryPanel?.querySelector(".resource-list");
+  const layout = fittingLayout();
+  if (layout === null) {
+    list?.style.removeProperty("--row-height");
+    return;
+  }
+  const { size, rowHeight } = layout;
+  // 行高写在目录元素上；翻页只替换目录内容，所以新一页沿用同样的行高
+  // 向下取到 0.01px，避免舍入后最后一行超出卡片
+  list.style.setProperty("--row-height", `${Math.floor(rowHeight * 100) / 100}px`);
+  try {
+    document.cookie = `${pageSizeCookie}=${size}; path=/; max-age=31536000; SameSite=Lax`;
+  } catch {
+    // 无法写入 Cookie 时，仍按当前条数刷新本页
+  }
+  const currentSize = Number(directoryPanel.dataset.pageSize) || size;
+  if (size === currentSize) {
+    return;
+  }
+  // 保持当前页第一条资料仍在新的一页里
+  const currentPage = Number(directoryPanel.dataset.page) || 1;
+  const firstIndex = (currentPage - 1) * currentSize;
+  const targetUrl = new URL(window.location.href);
+  const targetPage = Math.floor(firstIndex / size) + 1;
+  if (targetPage > 1 || targetUrl.searchParams.has("page")) {
+    targetUrl.searchParams.set("page", String(targetPage));
+  }
+  refreshDirectory(targetUrl.href, { updateHistory: "replace" });
+};
+
+let pageSizeTimer = 0;
+syncPageSize();
+window.addEventListener("resize", () => {
+  window.clearTimeout(pageSizeTimer);
+  pageSizeTimer = window.setTimeout(syncPageSize, 200);
 });

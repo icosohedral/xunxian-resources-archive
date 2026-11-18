@@ -19,7 +19,17 @@ from generated_config import CONFIG
 from generated_template import TEMPLATE_SOURCE
 
 
-PAGE_SIZE = 15
+# 每页条数由浏览器按索引卡片能放下的行数写入 Cookie；与本地 app.py 保持一致。
+PAGE_SIZE_COOKIE = "xunxian-archive-page-size"
+DEFAULT_PAGE_SIZE = 15
+MIN_PAGE_SIZE = 4
+MAX_PAGE_SIZE = 40
+
+
+def _page_size_from_cookie(value: str | None) -> int:
+    if value is None or not value.isdigit():
+        return DEFAULT_PAGE_SIZE
+    return min(MAX_PAGE_SIZE, max(MIN_PAGE_SIZE, int(value)))
 CHINA_TIMEZONE = timezone(timedelta(hours=8))
 VISITOR_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,80}$")
 
@@ -88,6 +98,7 @@ async def _search(
     kind: str = "",
     category: str = "",
     page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
 ) -> dict[str, Any]:
     if kind not in {"", "items", "companions", "title"}:
         raise ValueError("未知资源类型")
@@ -195,13 +206,13 @@ async def _search(
     ).bind(
         *parameters,
         *order_parameters,
-        PAGE_SIZE,
-        (page - 1) * PAGE_SIZE,
+        page_size,
+        (page - 1) * page_size,
     )
     rows = _result_rows(await list_statement.run())
     if total is None:
         total = int(rows[0]["search_total"]) if rows else 0
-    page_count = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+    page_count = max(1, (total + page_size - 1) // page_size)
     if page > page_count:
         page = page_count
     return {
@@ -290,6 +301,7 @@ async def _render(
     select_first_result: bool = False,
 ) -> HTMLResponse:
     env = request.scope["env"]
+    page_size = _page_size_from_cookie(request.cookies.get(PAGE_SIZE_COOKIE))
     is_overview = (
         not kind and not query.strip() and not category and detail is None
     )
@@ -308,6 +320,7 @@ async def _render(
                 kind=kind,
                 category=category,
                 page=page,
+                page_size=page_size,
             )
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -335,6 +348,7 @@ async def _render(
         site_version=CONFIG["site_version"],
         today_visitors=await _visitor_count(env.VISITS_DB),
         search=SimpleNamespace(**search),
+        page_size=page_size,
         stats=CONFIG["stats"],
         external_collection_counts=CONFIG["external_collection_counts"],
         filter_kind_labels=CONFIG["filter_kind_labels"],
@@ -361,23 +375,14 @@ async def index(
     category: str = Query(default=""),
     page: int = Query(default=1, ge=1),
 ) -> HTMLResponse:
-    detail = None
-    if not q.strip() and not category:
-        default_resource = CONFIG["default_filter_details"].get(kind)
-        if default_resource is not None:
-            detail = await _get_detail(
-                request.scope["env"].RESOURCE_DB,
-                default_resource[0],
-                default_resource[1],
-            )
+    # 打开道具、宠物、称号或检索后，默认选中当前列表的第一条。
     return await _render(
         request,
         query=q,
         kind=kind,
         category=category,
         page=page,
-        detail=detail,
-        select_first_result=bool(q.strip() or category),
+        select_first_result=bool(kind or q.strip() or category),
     )
 
 

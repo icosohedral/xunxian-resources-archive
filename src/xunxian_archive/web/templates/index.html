@@ -6,23 +6,28 @@
   <meta name="color-scheme" content="light">
   <title>{% if detail %}{{ detail.display_name }} · {% endif %}寻仙资源存档</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/app.js?v=20260730-1" defer></script>
+  <script>
+    try {
+      // 配色：green（默认）、orange（陶土橙）、dark（陶土橙深色）
+      const savedTheme = localStorage.getItem("xunxian-archive-color-theme");
+      if (savedTheme === "orange" || savedTheme === "dark") document.documentElement.dataset.theme = "orange";
+      if (savedTheme === "dark") document.documentElement.dataset.mode = "dark";
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261118-12">
+  <script src="/static/app.js?v=20261118-12" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-record">跳到资料正文</a>
 
   <header class="masthead">
     <a class="brand" href="/" aria-label="寻仙资源存档首页">
-      <span class="brand-seal" aria-hidden="true">寻</span>
+      <img class="brand-logo" src="/static/icons/logo.png?v=20261118-12" alt="" width="34" height="34">
       <span class="brand-copy">
         <strong>寻仙资源存档</strong>
-        <small class="brand-version">v{{ site_version }}</small>
       </span>
     </a>
     <div class="masthead-status">
-      <button class="masthead-about" type="button" data-about-open>关于网站</button>
-      <span class="masthead-separator" aria-hidden="true">|</span>
       <span class="masthead-visitors">今日来访 <strong id="today-visitors">{{ today_visitors }}</strong></span>
     </div>
   </header>
@@ -30,59 +35,50 @@
   <dialog class="about-dialog" aria-labelledby="about-title" data-about-dialog>
     <div class="about-panel">
       <header class="about-heading">
-        <div>
-          <span class="eyebrow">SITE CREDITS</span>
-          <h2 id="about-title">关于网站</h2>
-        </div>
-        <button class="about-close" type="button" aria-label="关闭关于网站弹窗" data-about-close>×</button>
+        <h2 id="about-title">寻仙资源存档 v{{ site_version }}</h2>
       </header>
-      <div class="about-content">
-        <span class="about-seal" aria-hidden="true">寻</span>
-        <div class="about-copy">
-          <section>
-            <span class="about-label">作者与维护者</span>
-            <h3>icosohedral</h3>
-            <p>寻仙资源资料库的整理、维护与网站开发。</p>
-            <a
-              class="about-github"
-              href="https://github.com/icosohedral/xunxian-resources-archive"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span>GitHub</span>
-              <strong>icosohedral</strong>
-              <b aria-hidden="true">↗</b>
-            </a>
-          </section>
-          <section>
-            <span class="about-label">特别鸣谢</span>
-            <h3>贴吧用户「耳目清净」</h3>
-            <p>感谢其开发的寻仙游戏资源解包工具，为本资料库的资源整理提供了重要支持。</p>
-          </section>
+      <div class="about-body">
+        <div class="about-row">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          <span class="about-label">项目地址</span>
+          <a class="about-link" href="https://github.com/icosohedral/xunxian-resources-archive" target="_blank" rel="noopener noreferrer" title="github.com/icosohedral/xunxian-resources-archive">xunxian-resources-archive</a>
         </div>
+        <div class="about-notice">本站为寻仙资料整理项目，游戏及相关权利归原权利人所有。</div>
       </div>
+      <footer class="about-foot">
+        <button class="about-ok" type="button" data-about-close>知道了</button>
+      </footer>
     </div>
   </dialog>
 
+  {%- set nav_icons = {"items": "items", "companions": "companions", "title": "title", "quests": "quests", "music": "music"} %}
   <nav class="kind-slips" aria-label="资源类型">
     {% for kind, label in filter_kind_labels.items() %}
       <a class="{% if filters.kind == kind %}is-active{% endif %}" href="/?kind={{ kind }}">
-        <span>{{ {"items":"物","companions":"灵","title":"号"}[kind] }}</span>
+        <span class="slip-icon"><img src="/static/icons/{{ nav_icons[kind] }}.png?v=20261118-12" alt="" width="28" height="28"></span>
         <b>{{ label }}</b>
-        <small>{{ stats.filter_counts.get(kind, 0) }}</small>
       </a>
     {% endfor %}
+    <div class="rail-sep" aria-hidden="true"></div>
     <a href="https://quests.xunxian.wiki" target="_blank" rel="noopener noreferrer">
-      <span>任</span><b>任务</b><small>{{ external_collection_counts.quests }}</small>
+      <span class="slip-icon"><img src="/static/icons/{{ nav_icons.quests }}.png?v=20261118-12" alt="" width="28" height="28"></span><b>任务</b>
     </a>
     <a href="https://music.xunxian.wiki" target="_blank" rel="noopener noreferrer">
-      <span>乐</span><b>音乐</b><small>{{ external_collection_counts.music }}</small>
+      <span class="slip-icon"><img src="/static/icons/{{ nav_icons.music }}.png?v=20261118-12" alt="" width="28" height="28"></span><b>音乐</b>
     </a>
+    <div class="rail-footer">
+      <button type="button" class="rail-version" data-about-open aria-haspopup="dialog" aria-label="关于寻仙资源存档，版本 {{ site_version }}">v{{ site_version }}</button>
+      <div class="theme-picker" role="group" aria-label="颜色主题">
+        <button type="button" class="theme-swatch" data-theme-value="green" aria-label="绿色主题" aria-pressed="true" title="绿色主题"></button>
+        <button type="button" class="theme-swatch" data-theme-value="orange" aria-label="陶土橙主题" aria-pressed="false" title="陶土橙主题"></button>
+        <button type="button" class="theme-swatch" data-theme-value="dark" aria-label="陶土橙深色主题" aria-pressed="false" title="陶土橙深色主题"></button>
+      </div>
+    </div>
   </nav>
 
   <main class="archive-shell {% if detail %}has-detail{% endif %} {% if is_overview %}is-overview{% endif %}">
     {% if not is_overview %}
-    <aside class="index-rail" aria-label="{{ filter_kind_labels.get(filters.kind, '资料') }}索引">
+    <aside class="index-rail" aria-label="{{ filter_kind_labels.get(filters.kind, '资料') }}索引" data-page-size="{{ page_size }}" data-page="{{ search.page }}">
       <div class="rail-heading">
         <span class="eyebrow">RESOURCE INDEX</span>
         <h1>{{ filter_kind_labels.get(filters.kind, "资料") }}索引</h1>
@@ -140,15 +136,18 @@
                 {% endif %}
               {% endfor %}
             </select>
-            <small class="filter-note">上级分类名称由资料库根据现有分组归纳</small>
           </label>
         {% endif %}
-        <button type="submit">检索卷宗</button>
+        <button type="submit">检索{{ filter_kind_labels.get(filters.kind, "资料") }}</button>
       </form>
 
-      <div class="result-caption" aria-live="polite">
-        <strong>{{ search.total }} 条</strong>
-        <span>第 {{ search.page }} / {{ search.page_count }} 页</span>
+      <div class="result-caption">
+        <strong aria-live="polite">{{ search.total }} 条</strong>
+        <nav class="pagination" aria-label="资料分页">
+          <a href="{{ previous_url }}" aria-label="上一页" title="上一页" aria-disabled="{{ 'true' if search.page <= 1 else 'false' }}">‹</a>
+          <span>第 {{ search.page }} / {{ search.page_count }} 页</span>
+          <a href="{{ next_url }}" aria-label="下一页" title="下一页" aria-disabled="{{ 'true' if search.page >= search.page_count else 'false' }}">›</a>
+        </nav>
       </div>
 
       <div class="resource-list">
@@ -171,12 +170,6 @@
           </div>
         {% endfor %}
       </div>
-
-      <nav class="pagination" aria-label="资料分页">
-        <a href="{{ previous_url }}" aria-disabled="{{ 'true' if search.page <= 1 else 'false' }}">上一页</a>
-        <span>{{ search.page }} / {{ search.page_count }}</span>
-        <a href="{{ next_url }}" aria-disabled="{{ 'true' if search.page >= search.page_count else 'false' }}">下一页</a>
-      </nav>
     </aside>
     {% endif %}
 
@@ -187,15 +180,16 @@
             <div>
               <span class="eyebrow">{{ detail.category_label or detail.kind_label }} DOSSIER</span>
               <h2>{{ detail.display_name }}</h2>
-              <p class="identity-line">{{ detail.resource_kind }}:<b>{{ detail.resource_id }}</b></p>
+              <div class="dossier-meta">
+                <span class="dossier-tag">{{ detail.category_label or detail.kind_label }}</span>
+                <p class="identity-line">{{ detail.resource_kind }}:<b>{{ detail.resource_id }}</b></p>
+              </div>
             </div>
-            <button class="copy-link" type="button" data-copy-link>复制本页链接</button>
           </header>
 
           {% if detail.metadata or detail.use_type_descriptions %}
             <section class="fact-section" aria-labelledby="fact-title">
               <div class="section-title">
-                <span>壹</span>
                 <div><small>KNOWN FIELDS</small><h3 id="fact-title">概览</h3></div>
               </div>
               <dl class="fact-grid{% if detail.resource_kind == 'pet' %} fact-grid--pet{% endif %}">
@@ -224,7 +218,6 @@
           {% if detail.resource_kind == "title" %}
             <section class="fact-section" aria-labelledby="title-attribute-title">
               <div class="section-title">
-                <span>贰</span>
                 <div><small>ATTRIBUTE BONUSES</small><h3 id="title-attribute-title">属性加成</h3></div>
               </div>
               <div class="title-attribute-groups">
@@ -263,7 +256,6 @@
           {% if detail.resource_kind == "item" %}
             <section class="fact-section" aria-labelledby="item-description-title">
               <div class="section-title">
-                <span>贰</span>
                 <div><small>ITEM DESCRIPTION</small><h3 id="item-description-title">道具说明</h3></div>
               </div>
               {% if detail.item_description %}
@@ -279,7 +271,6 @@
           {% if detail.resource_kind == "item" %}
             <section class="fact-section" aria-labelledby="effect-title">
               <div class="section-title">
-                <span>叁</span>
                 <div><small>USE EFFECTS</small><h3 id="effect-title">使用效果</h3></div>
               </div>
               {% if detail.display_use_effects %}
@@ -325,7 +316,6 @@
           {% if detail.resource_kind in ["ride", "pet", "title"] %}
             <section class="fact-section" aria-labelledby="acquisition-title">
               <div class="section-title">
-                <span>{{ "叁" if detail.resource_kind == "title" else "贰" }}</span>
                 <div><small>ACQUISITION ITEMS</small><h3 id="acquisition-title">获得道具</h3></div>
               </div>
               {% if detail.acquisition_items %}
@@ -382,7 +372,6 @@
           {% if detail.resource_kind == "ride" or detail.ride_skill_context %}
             <section class="fact-section" aria-labelledby="ride-skill-title">
               <div class="section-title">
-                <span>叁</span>
                 <div><small>RIDING ARTS</small><h3 id="ride-skill-title">坐骑技能</h3></div>
               </div>
               {% if detail.ride_skill_context %}
@@ -429,7 +418,6 @@
 
           <section class="fact-section" aria-labelledby="quest-title">
             <div class="section-title">
-              <span>{% if detail.resource_kind in ["item", "ride", "title"] or (detail.resource_kind == "pet" and detail.ride_skill_context) %}肆{% elif detail.resource_kind == "pet" %}叁{% else %}贰{% endif %}</span>
               <div><small>QUEST LINKS</small><h3 id="quest-title">关联任务</h3></div>
             </div>
             {% if detail.quest_links %}

@@ -333,9 +333,14 @@ def test_home_search_and_detail_render(tmp_path: Path) -> None:
     assert 'href="/?kind=pet&amp;q="' not in home.text
     assert 'href="/?kind=ride&amp;q="' not in home.text
     assert 'href="https://quests.xunxian.wiki"' in home.text
-    assert "<span>任</span><b>任务</b><small>8828</small>" in home.text
+    assert "<b>任务</b>" in home.text
+    assert 'src="/static/icons/companions.png?v=' in home.text
+    assert 'class="brand-logo" src="/static/icons/logo.png?v=' in home.text
     assert 'href="https://music.xunxian.wiki"' in home.text
-    assert "<span>乐</span><b>音乐</b><small>6414</small>" in home.text
+    assert "<b>音乐</b>" in home.text
+    assert "<small>8828</small>" not in home.text
+    assert "<small>6414</small>" not in home.text
+    assert "rail-caption" not in home.text
     assert "<small>外链</small>" not in home.text
     assert 'target="_blank" rel="noopener noreferrer"' in home.text
 
@@ -376,7 +381,7 @@ def test_direct_detail_infers_its_directory_kind(
     assert seen_kinds == ["title"]
 
 
-def test_resource_landing_pages_show_default_details(
+def test_resource_landing_pages_select_first_result(
     tmp_path: Path,
 ) -> None:
     database_path = _database(tmp_path)
@@ -398,19 +403,17 @@ def test_resource_landing_pages_show_default_details(
 
     client = TestClient(create_app(database_path, PROJECT_ROOT / "public"))
 
-    item_page = client.get("/?kind=items")
-    companion_page = client.get("/?kind=companions")
-    title_page = client.get("/?kind=title")
-
-    assert item_page.status_code == 200
-    assert "<h2>金签子</h2>" in item_page.text
-    assert "item:<b>12029</b>" in item_page.text
-    assert companion_page.status_code == 200
-    assert "<h2>吊睛斑斓虎王</h2>" in companion_page.text
-    assert "pet:<b>1534</b>" in companion_page.text
-    assert title_page.status_code == 200
-    assert "<h2>宁海杰出青年</h2>" in title_page.text
-    assert "title:<b>401</b>" in title_page.text
+    # 打开道具、宠物、称号时，详情默认显示列表中的第一条，而不是固定资源
+    for kind in ("items", "companions", "title"):
+        page = client.get(f"/?kind={kind}")
+        assert page.status_code == 200
+        first_link = re.search(
+            r'<div class="resource-list">\s*<a\s+href="/resources/(\w+)/(\d+)\?[^"]*"\s+class="is-current"',
+            page.text,
+        )
+        assert first_link is not None, kind
+        resource_kind, resource_id = first_link.groups()
+        assert f"{resource_kind}:<b>{resource_id}</b>" in page.text
 
 
 def test_filtered_landing_page_selects_first_matching_result(
@@ -440,15 +443,17 @@ def test_filtered_landing_page_selects_first_matching_result(
     assert "侍宠 DOSSIER" in response.text
 
 
-def test_missing_default_detail_keeps_landing_page_available(
-    tmp_path: Path,
-) -> None:
-    client = TestClient(create_app(_database(tmp_path), PROJECT_ROOT / "public"))
+def test_empty_landing_page_shows_no_detail(tmp_path: Path) -> None:
+    database_path = _database(tmp_path)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DELETE FROM resource WHERE resource_kind = 'title'")
+    client = TestClient(create_app(database_path, PROJECT_ROOT / "public"))
 
-    response = client.get("/?kind=items")
+    response = client.get("/?kind=title")
 
     assert response.status_code == 200
     assert "<article class=\"dossier\">" not in response.text
+    assert "<h2>未找到称号</h2>" in response.text
 
 
 def test_search_results_select_the_first_matching_detail(tmp_path: Path) -> None:
@@ -514,12 +519,21 @@ def test_site_version_and_daily_unique_visitors(tmp_path: Path) -> None:
 
     home = client.get("/")
     assert home.status_code == 200
-    assert '<small class="brand-version">v1.0.4</small>' in home.text
-    assert 'data-about-open>关于网站</button>' in home.text
+    assert 'class="brand-version"' not in home.text
+    assert (
+        '<button type="button" class="rail-version" data-about-open'
+        in home.text
+    )
+    assert ">v1.1.0</button>" in home.text
+    assert "关于网站" not in home.text
     assert '<dialog class="about-dialog"' in home.text
-    assert "寻仙资源资料库的整理、维护与网站开发。" in home.text
+    assert '<h2 id="about-title">寻仙资源存档 v1.1.0</h2>' in home.text
+    assert 'title="github.com/icosohedral/xunxian-resources-archive"' in home.text
+    assert '>xunxian-resources-archive</a>' in home.text
+    assert "作者维护" not in home.text
+    assert "特别鸣谢" not in home.text
+    assert 'data-about-close>知道了</button>' in home.text
     assert "https://github.com/icosohedral/xunxian-resources-archive" in home.text
-    assert "贴吧用户「耳目清净」" in home.text
     assert (
         '<strong id="today-visitors">0</strong>'
         in home.text
@@ -638,7 +652,8 @@ def test_home_search_and_detail_content(tmp_path: Path) -> None:
         '<option value="group:风物志·集">风物志·集</option>'
         in title_search.text
     )
-    assert "上级分类名称由资料库根据现有分组归纳" in title_search.text
+    assert "上级分类名称由资料库根据现有分组归纳" not in title_search.text
+    assert '<button type="submit">检索称号</button>' in title_search.text
     assert (
         '<option value="group:车迟国剿匪" disabled>'
         "车迟国剿匪（暂无称号）</option>"
@@ -697,8 +712,9 @@ def test_home_search_and_detail_content(tmp_path: Path) -> None:
     assert "流通金：2砖" in detail.text
     assert "出售价格" in detail.text
     assert "流通金：23银" in detail.text
-    assert detail.text.count("<span>叁</span>") == 1
-    assert "<span>肆</span>" in detail.text
+    assert not any(f"<span>{numeral}</span>" in detail.text for numeral in "壹贰叁肆")
+    assert "data-copy-link" not in detail.text
+    assert "复制本页链接" not in detail.text
     assert "资源关系" not in detail.text
     assert "官方说明" not in detail.text
     assert "效果 7" not in detail.text
@@ -878,7 +894,7 @@ def test_pagination_uses_directory_only_refresh() -> None:
 
     assert 'event.target.closest(".pagination a")' in script
     assert "refreshDirectory(paginationLink.href, { preservedPosition })" in script
-    assert 'selectors = [".result-caption", ".resource-list", ".pagination"]' in script
+    assert 'selectors = [".result-caption", ".resource-list"]' in script
     assert "window.history.pushState" in script
     assert 'window.history.scrollRestoration = "manual"' in script
     assert 'root.style.scrollBehavior = "auto"' in script
@@ -1047,8 +1063,7 @@ def test_servant_pet_hides_ride_skills_and_empty_ride_uses_short_state(
 
     assert '<h3 id="ride-skill-title">坐骑技能</h3>' not in pet.text
     assert "坐骑技能为空" not in pet.text
-    assert "<span>叁</span>" in pet.text
-    assert "<span>肆</span>" not in pet.text
+    assert not any(f"<span>{numeral}</span>" in pet.text for numeral in "壹贰叁肆")
     assert '<div class="section-empty">坐骑技能为空</div>' in ride.text
     assert "该宠物未关联骑乘配置" not in pet.text
     assert "六个技能槽均为空" not in ride.text
@@ -1132,9 +1147,7 @@ def test_title_detail_links_acquisition_items_without_resource_section(
     assert 'href="/resources/item/1515"' in title.text
     assert "使用后获得此称号" in title.text
     assert "资源关系" not in title.text
-    assert "<span>贰</span>" in title.text
-    assert "<span>叁</span>" in title.text
-    assert "<span>肆</span>" in title.text
+    assert not any(f"<span>{numeral}</span>" in title.text for numeral in "壹贰叁肆")
     assert (
         title.text.index('id="fact-title"')
         < title.text.index('id="title-attribute-title"')
@@ -1174,3 +1187,55 @@ def test_item_index_prioritizes_normal_names_over_internal_placeholders(
 
     assert response.status_code == 200
     assert response.text.index("正常道具") < response.text.index("*占位道具")
+
+
+def test_page_size_follows_cookie_within_bounds(tmp_path: Path) -> None:
+    database_path = _database(tmp_path)
+    with sqlite3.connect(database_path) as connection:
+        connection.executemany(
+            """
+            INSERT INTO resource (
+                resource_kind, resource_id, display_name, build_id,
+                selected_source_file, selected_source_row, metadata_json,
+                raw_values_json
+            ) VALUES ('item', ?, ?, ?, 'fixtures/resources.tsv', ?, '{}', '[]')
+            """,
+            [
+                (900000 + index, f"测试道具{index:02d}", "a" * 64, index + 1)
+                for index in range(60)
+            ],
+        )
+    client = TestClient(create_app(database_path, PROJECT_ROOT / "public"))
+
+    def rows_for(cookie: str | None) -> tuple[int, str]:
+        if cookie is None:
+            client.cookies.clear()
+        else:
+            client.cookies.set("xunxian-archive-page-size", cookie)
+        page = client.get("/?kind=items")
+        assert page.status_code == 200
+        size = re.search(r'data-page-size="(\d+)"', page.text)
+        assert size is not None
+        return page.text.count('<span class="kind-rune">'), size.group(1)
+
+    # 没有 Cookie 或值无效时每页 15 条；有效值按卡片能放下的行数输出，并限制在 4–40
+    assert rows_for(None) == (15, "15")
+    assert rows_for("8") == (8, "8")
+    assert rows_for("abc") == (15, "15")
+    assert rows_for("1") == (4, "4")
+    assert rows_for("999") == (40, "40")
+
+
+def test_directory_page_size_is_measured_in_browser() -> None:
+    script = (PROJECT_ROOT / "public/app.js").read_text(encoding="utf-8")
+    styles = (PROJECT_ROOT / "public/styles.css").read_text(encoding="utf-8")
+
+    assert 'const pageSizeCookie = "xunxian-archive-page-size";' in script
+    assert 'window.addEventListener("resize"' in script
+    assert 'refreshDirectory(targetUrl.href, { updateHistory: "replace" })' in script
+    # 目录正好填满卡片：多放一行时压缩不超过 10%，否则把剩余空白分给每行
+    assert "const maxRowCompression = 0.1;" in script
+    assert 'list.style.setProperty("--row-height"' in script
+    assert "height: var(--row-height, var(--row-base));" in styles
+    # 桌面端目录不滚动，条数由页面大小决定
+    assert "overflow-y: auto" not in styles.split(".resource-list {", 1)[1].split("}", 1)[0]

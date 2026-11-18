@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 import sqlite3
@@ -311,6 +312,9 @@ class CatalogRepository:
                 f"资源数据库不存在：{database_path}；请先运行构建命令"
             )
         self.database_path = database_path
+        # 数据库以只读方式打开，汇总结果在进程生命周期内不会变化。
+        self._stats_cache: dict[str, Any] | None = None
+        self._title_group_options_cache: list[dict[str, Any]] | None = None
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(
@@ -321,6 +325,11 @@ class CatalogRepository:
         return connection
 
     def stats(self) -> dict[str, Any]:
+        if self._stats_cache is None:
+            self._stats_cache = self._load_stats()
+        return copy.deepcopy(self._stats_cache)
+
+    def _load_stats(self) -> dict[str, Any]:
         with self._connect() as connection:
             counts = {
                 row["resource_kind"]: row["count"]
@@ -358,18 +367,17 @@ class CatalogRepository:
         }
 
     def title_group_options(self) -> list[dict[str, Any]]:
+        if self._title_group_options_cache is None:
+            self._title_group_options_cache = self._load_title_group_options()
+        return copy.deepcopy(self._title_group_options_cache)
+
+    def _load_title_group_options(self) -> list[dict[str, Any]]:
         with self._connect() as connection:
+            # 先一次性按分组统计全部称号，避免逐个分组重复扫描并解析 JSON。
             rows = connection.execute(
                 """
-                WITH group_definitions AS (
-                    SELECT DISTINCT
-                        display_name AS group_name,
-                        family_id AS group_family_id
-                    FROM title_group
-
-                    UNION
-
-                    SELECT DISTINCT
+                WITH title_group_counts AS (
+                    SELECT
                         json_extract(
                             metadata_json,
                             '$.title_group_name'
@@ -377,38 +385,36 @@ class CatalogRepository:
                         json_extract(
                             metadata_json,
                             '$.title_group_family_id'
-                        ) AS group_family_id
+                        ) AS group_family_id,
+                        COUNT(*) AS title_count
                     FROM resource
                     WHERE resource_kind = 'title'
-                      AND json_extract(
-                          metadata_json,
-                          '$.title_group_name'
-                      ) IS NOT NULL
+                    GROUP BY group_name, group_family_id
+                ),
+                group_definitions AS (
+                    SELECT DISTINCT
+                        display_name AS group_name,
+                        family_id AS group_family_id
+                    FROM title_group
+
+                    UNION
+
+                    SELECT group_name, group_family_id
+                    FROM title_group_counts
+                    WHERE group_name IS NOT NULL
                 )
                 SELECT
                     definition.group_name,
                     definition.group_family_id,
-                    (
-                        SELECT COUNT(*)
-                        FROM resource
-                        WHERE resource_kind = 'title'
-                          AND json_extract(
-                              metadata_json,
-                              '$.title_group_name'
-                          ) = definition.group_name
-                          AND (
-                              (
-                                  definition.group_family_id IS NULL
-                                  AND json_extract(
-                                      metadata_json,
-                                      '$.title_group_family_id'
-                                  ) IS NULL
-                              )
-                              OR json_extract(
-                                  metadata_json,
-                                  '$.title_group_family_id'
-                              ) = definition.group_family_id
-                          )
+                    COALESCE(
+                        (
+                            SELECT SUM(counts.title_count)
+                            FROM title_group_counts AS counts
+                            WHERE counts.group_name = definition.group_name
+                              AND counts.group_family_id
+                                  IS definition.group_family_id
+                        ),
+                        0
                     ) AS title_count
                 FROM group_definitions AS definition
                 ORDER BY

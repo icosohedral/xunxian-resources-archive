@@ -29,7 +29,6 @@ DETAIL_CHUNK_SIZE = 60_000
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from xunxian_archive.web.app import (  # noqa: E402
-    DEFAULT_FILTER_DETAILS,
     EXTERNAL_COLLECTION_COUNTS,
     SITE_VERSION,
 )
@@ -723,7 +722,6 @@ def _write_generated_modules(
     ).title_group_options()
     config = {
         "site_version": SITE_VERSION,
-        "default_filter_details": DEFAULT_FILTER_DETAILS,
         "external_collection_counts": EXTERNAL_COLLECTION_COUNTS,
         "filter_kind_labels": FILTER_KIND_LABELS,
         "item_category_labels": ITEM_CATEGORY_LABELS,

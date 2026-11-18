@@ -25,13 +25,19 @@ from xunxian_archive.web.visits import VisitorStore
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
-SITE_VERSION = "1.0.4"
+SITE_VERSION = "1.1.0"
 VISITOR_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,80}$")
-DEFAULT_FILTER_DETAILS = {
-    "items": ("item", 12029),
-    "companions": ("pet", 1534),
-    "title": ("title", 401),
-}
+# 每页条数由浏览器按索引卡片能放下的行数写入 Cookie；缺失或异常时用默认值。
+PAGE_SIZE_COOKIE = "xunxian-archive-page-size"
+DEFAULT_PAGE_SIZE = 15
+MIN_PAGE_SIZE = 4
+MAX_PAGE_SIZE = 40
+
+
+def page_size_from_cookie(value: str | None) -> int:
+    if value is None or not value.isdigit():
+        return DEFAULT_PAGE_SIZE
+    return min(MAX_PAGE_SIZE, max(MIN_PAGE_SIZE, int(value)))
 EXTERNAL_COLLECTION_COUNTS = {
     "quests": 8828,
     "music": 6414,
@@ -71,6 +77,9 @@ def create_app(
             and not category
             and detail is None
         )
+        page_size = page_size_from_cookie(
+            request.cookies.get(PAGE_SIZE_COOKIE)
+        )
         if is_overview:
             result = SearchResult([], 0, 1, 1)
         else:
@@ -80,6 +89,7 @@ def create_app(
                     kind=kind,
                     category=category,
                     page=page,
+                    page_size=page_size,
                 )
             except ValueError as exc:
                 raise HTTPException(
@@ -108,6 +118,7 @@ def create_app(
                 "site_version": SITE_VERSION,
                 "today_visitors": visitor_store.count_today(),
                 "search": result,
+                "page_size": page_size,
                 "stats": stats,
                 "external_collection_counts": EXTERNAL_COLLECTION_COUNTS,
                 "filter_kind_labels": FILTER_KIND_LABELS,
@@ -149,19 +160,14 @@ def create_app(
         category: str = Query(default=""),
         page: int = Query(default=1, ge=1),
     ) -> HTMLResponse:
-        detail = None
-        if not q.strip() and not category:
-            default_resource = DEFAULT_FILTER_DETAILS.get(kind)
-            if default_resource is not None:
-                detail = repository.detail(*default_resource)
+        # 打开道具、宠物、称号或检索后，默认选中当前列表的第一条。
         return render(
             request,
             query=q,
             kind=kind,
             category=category,
             page=page,
-            detail=detail,
-            select_first_result=bool(q.strip() or category),
+            select_first_result=bool(kind or q.strip() or category),
         )
 
     @app.get("/resources/{kind}/{resource_id}", response_class=HTMLResponse)
